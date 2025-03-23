@@ -9,7 +9,7 @@ ENV MAVEN_CONFIG=
 RUN /workdir/mvnw dependency:go-offline
 RUN /bin/bash /workdir/mvnw package -DskipTests
 
-FROM openjdk:8-jdk-alpine
+FROM openjdk:17-jdk-alpine
 WORKDIR /workdir
 RUN apk add --no-cache bash
 COPY wait-for-it.sh /workdir/wait-for-it.sh

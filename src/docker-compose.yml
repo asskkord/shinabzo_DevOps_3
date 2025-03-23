@@ -39,3 +39,8 @@ services:
 
   rabbit:
     image: rabbitmq:3-management-alpine
+
+  loki:
+    image: grafana/loki
+    ports:
+      - "3100:3100"
