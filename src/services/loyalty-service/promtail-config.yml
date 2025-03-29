@@ -1,0 +1,13 @@
+server:
+  http_listen_port: 9080
+
+clients:
+  - url: "http://loki:3100/loki/api/v1/push"
+
+scrape_configs:
+  - job_name: "loyalty-service-logs"
+    static_configs:
+      - labels:
+          job: "loyalty-service"
+          host: "loyalty-service-container"
+          __path__: "/workdir/app.log"

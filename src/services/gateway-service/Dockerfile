@@ -9,11 +9,18 @@ ENV MAVEN_CONFIG=
 RUN /workdir/mvnw dependency:go-offline
 RUN /bin/bash /workdir/mvnw package -DskipTests
 
-FROM openjdk:17-jdk-alpine
+FROM openjdk:17-jdk-bullseye
 WORKDIR /workdir
-RUN apk add --no-cache bash
 COPY wait-for-it.sh /workdir/wait-for-it.sh
 COPY --from=build /workdir/target/gateway-service-0.0.1-SNAPSHOT.jar /workdir/target/gateway-service-0.0.1-SNAPSHOT.jar
+
+RUN curl -LO "https://github.com/grafana/loki/releases/latest/download/promtail-linux-amd64.zip" && \
+    unzip promtail-linux-amd64.zip && \
+    chmod +x promtail-linux-amd64 && \
+    mv promtail-linux-amd64 /usr/local/bin/promtail
+
+COPY promtail-config.yml /workdir/promtail-config.yml
+
 ENV SESSION_SERVICE_HOST=session-service
 ENV SESSION_SERVICE_PORT=8081
 ENV HOTEL_SERVICE_HOST=hotel-service
@@ -29,4 +36,7 @@ ENV REPORT_SERVICE_PORT=8086
 RUN chmod +x wait-for-it.sh
 EXPOSE 8087
 
-CMD ["./wait-for-it.sh", "database:5432", "-s", "-t", "0", "--", "java", "-jar", "target/gateway-service-0.0.1-SNAPSHOT.jar"]
+COPY script.sh /workdir/script.sh
+RUN chmod +x script.sh
+
+CMD [ "/bin/bash", "script.sh" ]

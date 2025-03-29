@@ -55,6 +55,36 @@ messagesSent.increment();
 
 ![custom_metric](screenshots/image1.png)
 
+Укажем в **application.properties** следующую строку, чтобы приложение выгружало свои логи в файл
+
+```
+logging.file.name=app.log
+```
+
+**Promtail** для выгрузки логов в **Loki** будем устанавиливать в контейнер с каждым сервисом потому что так проще. Для этого модифицируем **Dockerfile** для каждого сервиса примерно следующим образом: скачиваем promtail, копируем конфиг и запускаем вместе с сервисом
+
+```
+RUN curl -LO "https://github.com/grafana/loki/releases/latest/download/promtail-linux-amd64.zip" && \
+    unzip promtail-linux-amd64.zip && \
+    chmod +x promtail-linux-amd64 && \
+    mv promtail-linux-amd64 /usr/local/bin/promtail
+
+COPY promtail-config.yml /workdir/promtail-config.yml
+.
+.
+.
+COPY script.sh /workdir/script.sh
+RUN chmod +x script.sh
+CMD [ "/bin/bash", "script.sh" ]
+```
+
+В **script.sh**:
+```
+#!/bin/bash
+./wait-for-it.sh database:5432 -s -t 0 -- java -jar target/booking-service-0.0.1-SNAPSHOT.jar &
+promtail -config.file=/workdir/promtail-config.yml
+```
+
 ## Part 2. Визуализация
 
 
