@@ -263,7 +263,39 @@ modules:
 
 ## Part 2. Визуализация
 
+Добавим сервис **grafana** и прокинем 3000 порт на хост машину.
 
+```yml
+grafana:
+  image: grafana/grafana
+  ports:
+    - "3000:3000"
+```
+
+Добавим **Data sources**
+
+![datasources](screenshots/image7.png)
+
+| Метрика     | Запрос      |
+|-------------|-------------|
+| количество нод    | `count(up{job="node-exporter"})`    |
+| количество контейнеров    | `count(container_cpu_usage_seconds_total{image!=""})`    |
+| использование CPU по сервисам | `rate(container_cpu_usage_seconds_total{container_label_com_docker_swarm_service_name!="", container_label_com_docker_compose_project="src"}[1m])` |
+| использование CPU по ядрам и узлам | `sum(rate(node_cpu_seconds_total{job="node-exporter", mode!="idle"}[1m])) by (instance, cpu)` |
+| затраченная RAM | `node_memory_MemTotal_bytes{job="node-exporter"} / (1024*1024*1024) - node_memory_MemFree_bytes{job="node-exporter"} / (1024*1024*1024)` |
+| доступная память | `sum(node_filesystem_free_bytes{job="node-exporter"} / (1024*1024*1024)) by (instance)` |
+| количество CPU | `count(node_cpu_seconds_total{mode="idle", job="node-exporter"}) by (instance)` |
+| доступность google.com | `probe_success{job="blackbox", instance="142.250.190.78"}` |
+| количество отправленных сообщений в rabbitmq | `rabbitmq_messages_sent_total{job="micrometer"}` |
+| количество обработанных сообщений в rabbitmq | `rabbitmq_messages_processed_total{job="micrometer"}` |
+| количество бронирований | `hotel_bookings_total{job="micrometer"}` |
+| количество полученных запросов на gateway | `requests_received_gateway_total{job="micrometer"}` |
+| количество полученных запросов на авторизацию пользователей | `user_authorization_requests_total{job="micrometer"}` |
+| логи приложения | ``` {filename="/workdir/app.log"} \|=`` ``` |
+
+![grafana1](screenshots/image8.png)
+
+![grafana2](screenshots/image9.png)
 
 ## Part 3. Отслеживание критических событий
 
