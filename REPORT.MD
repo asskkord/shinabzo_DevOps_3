@@ -389,5 +389,11 @@ receivers:
       - to: 'asskkord@gmail.com'
     telegram_configs:
       - bot_token: '8029910691:AAH53yQ7549MofkEQlVRGfSqGfhmPlXO87s' # токен берем от BotFather
-        chat_id: '-4666974995' # chat id можем взять из API. В данном случае это id группы.
+        chat_id: -4666974995 # chat id можем взять из API. В данном случае это id группы.
 ```
+
+Приходят алерты в тг и на почту
+
+![tg](screenshots/image10.png)
+
+![mail](screenshots/image11.png)
