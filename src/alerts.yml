@@ -1,0 +1,30 @@
+groups:
+  - name: disk_alerts
+    rules:
+      - alert: low_disk_space
+        expr: sum(node_filesystem_free_bytes{job="node-exporter"} / (1024*1024)) by (instance) < 100
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Доступная память меньше 100 мб {{ $labels.instance }}"
+  
+  - name: ram_alerts
+    rules:
+      - alert: high_ram_usage
+        expr: node_memory_MemTotal_bytes{job="node-exporter"} / (1024*1024*1024) - node_memory_MemFree_bytes{job="node-exporter"} / (1024*1024*1024) > 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Затраченная RAM больше 1 гб на ноде {{ $labels.instance }}"
+
+  - name: cpu_alerts
+    rules:
+      - alert: high_cpu_usage
+        expr: rate(container_cpu_usage_seconds_total{container_label_com_docker_swarm_service_name!="", container_label_com_docker_compose_project="src"}[1m]) * 100 > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Использование CPU по сервису превышает 10% на сервисе {{ $labels.container_label_com_docker_compose_service }}"

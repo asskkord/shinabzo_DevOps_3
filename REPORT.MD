@@ -29,7 +29,7 @@ management.endpoint.prometheus.enabled=true
 
 В самом коде сервиса импортируем необходимые библиотеки
 
-```properties
+```java
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
 ```
@@ -47,7 +47,7 @@ public QueueProducer(MeterRegistry meterRegistry) {
 
 Привяжем к конкретному методу инкремент метрики (показано на примере метрики количества отправленных сообщений в **rabbitmq**)
 
-```properties
+```java
 messagesSent.increment();
 ```
 
@@ -299,4 +299,95 @@ grafana:
 
 ## Part 3. Отслеживание критических событий
 
+Развернем **alermanager** в стеке отдельным сервисом.
 
+```yml
+alertmanager:
+  image: prom/alertmanager
+  container_name: alertmanager
+  ports:
+    - "9093:9093"
+  volumes:
+    - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+  deploy:
+    placement:
+      constraints:
+        - "node.role == manager"
+```
+
+В конфиги прометеуса **prometheus.yml** надо будет дописать следующее
+
+```yml
+rule_files:
+  - "alerts.yml"  # конфиг c описанием правил для алертов
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093  # куда прометеус будет слать запросы об алертах
+```
+
+**alerts.yml** тоже прокинем в контейнер с **prometheus**
+
+```yml
+volumes:
+  - ./prometheus.yml:/etc/prometheus/prometheus.yml
+  - ./alerts.yml:/etc/prometheus/alerts.yml
+```
+
+**alerts.yml**
+```yml
+groups:
+  - name: disk_alerts
+    rules:
+      - alert: low_disk_space
+        expr: sum(node_filesystem_free_bytes{job="node-exporter"} / (1024*1024)) by (instance) < 100  # все метрики аналогичны тем, что в дешбордах
+        for: 1m # условие выше должно быть выполненно в течение 1 минуты
+        labels:
+          severity: critical
+        annotations:
+          summary: "Доступная память меньше 100 мб {{ $labels.instance }}"
+  
+  - name: ram_alerts
+    rules:
+      - alert: high_ram_usage
+        expr: node_memory_MemTotal_bytes{job="node-exporter"} / (1024*1024*1024) - node_memory_MemFree_bytes{job="node-exporter"} / (1024*1024*1024) > 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Затраченная RAM больше 1 гб на ноде {{ $labels.instance }}"
+
+  - name: cpu_alerts
+    rules:
+      - alert: high_cpu_usage
+        expr: rate(container_cpu_usage_seconds_total{container_label_com_docker_swarm_service_name!="", container_label_com_docker_compose_project="src"}[1m]) * 100 > 10
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Использование CPU по сервису превышает 10% на сервисе {{ $labels.container_label_com_docker_compose_service }}"
+```
+
+Создадим **alertmanager.yml**. В нем настроим алерты для tg и для gmail.
+
+```yml
+global:
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'asskkord@gmail.com'
+  smtp_auth_username: 'asskkord@gmail.com'
+  smtp_auth_password: 'ldzl hpxp dlga ctuu'  # здесь указывается не пароль от аккаунта, а пароль приложения, который надо специально создать в настройках gmail
+  smtp_require_tls: true
+
+route:
+  receiver: 'all'
+
+receivers:
+  - name: 'all'
+    email_configs:
+      - to: 'asskkord@gmail.com'
+    telegram_configs:
+      - bot_token: '8029910691:AAH53yQ7549MofkEQlVRGfSqGfhmPlXO87s' # токен берем от BotFather
+        chat_id: '-4666974995' # chat id можем взять из API. В данном случае это id группы.
+```

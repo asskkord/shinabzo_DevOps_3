@@ -1,0 +1,17 @@
+global:
+  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_from: 'asskkord@gmail.com'
+  smtp_auth_username: 'asskkord@gmail.com'
+  smtp_auth_password: 'ldzl hpxp dlga ctuu'  # здесь указывается не пароль от аккаунта, а пароль приложения, который надо специально создать в настройках gmail
+  smtp_require_tls: true
+
+route:
+  receiver: 'all'
+
+receivers:
+  - name: 'all'
+    email_configs:
+      - to: 'asskkord@gmail.com'
+    telegram_configs:
+      - bot_token: '8029910691:AAH53yQ7549MofkEQlVRGfSqGfhmPlXO87s' # токен берем от BotFather
+        chat_id: '-4666974995' # chat id можем взять из API. В данном случае это id группы.
