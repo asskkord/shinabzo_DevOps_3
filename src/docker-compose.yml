@@ -1,0 +1,110 @@
+version: '3.8'
+
+services:
+  database:
+    image: asskkord/asskkord9:database
+
+  booking-service:
+    image: asskkord/asskkord9:booking-service
+
+  gateway-service:
+    image: asskkord/asskkord9:gateway-service
+    ports:
+      - "8087:8087"
+
+  hotel-service:
+    image: asskkord/asskkord9:hotel-service
+
+  loyalty-service:
+    image: asskkord/asskkord9:loyalty-service
+
+  payment-service:
+    image: asskkord/asskkord9:payment-service
+
+  report-service:
+    image: asskkord/asskkord9:report-service
+
+  session-service:
+    image: asskkord/asskkord9:session-service
+    ports:
+      - "8081:8081"
+
+  rabbit:
+    image: rabbitmq:3-management-alpine
+
+  loki:
+    image: grafana/loki
+    ports:
+      - "3100:3100"
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+
+  prometheus:
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./alerts.yml:/etc/prometheus/alerts.yml
+    ports:
+      - "9090:9090"
+    deploy:
+      placement:
+        constraints:
+          - "node.role == manager"
+  
+  node-exporter:
+    image: prom/node-exporter
+    command:
+      - '--path.rootfs=/host'
+    network_mode: host
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - '/:/host:ro,rslave'
+    ports:
+      - "9100:9100"
+    deploy:
+      mode: global
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter
+    command:
+      - '--config.file=/etc/blackbox/blackbox.yml'
+    volumes:
+      - './blackbox.yml:/etc/blackbox/blackbox.yml'
+    ports:
+      - "9115:9115"
+    deploy:
+      placement:
+        constraints:
+          - "node.role == manager"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor
+    deploy:
+      mode: global
+    ports:
+      - target: 8080
+        published: 8100
+        protocol: tcp
+        mode: host
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+
+  alertmanager:
+    image: prom/alertmanager
+    container_name: alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    deploy:
+      placement:
+        constraints:
+          - "node.role == manager"

@@ -17,6 +17,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.UUID;
 
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+
 @Service
 public class BookingServiceImplementation implements BookingService {
     @Autowired
@@ -33,6 +36,13 @@ public class BookingServiceImplementation implements BookingService {
 
     @Autowired
     private QueueProducer queueProducer;
+
+    private final Counter bookingCounter;
+
+    @Autowired
+    public BookingServiceImplementation(MeterRegistry meterRegistry) {
+        this.bookingCounter = meterRegistry.counter("hotel_bookings_total");
+    }
 
     @Override
     public void patchHotelInfo(UUID hotelUid, PatchRoomsInfoReq patchRoomsInfoReq)
@@ -124,6 +134,7 @@ public class BookingServiceImplementation implements BookingService {
             }
             try {
                 reservationRepository.save(reservation);
+                bookingCounter.increment();
             } catch (Exception ex) {
                 fallbackPay(paymentUids, bookingStatisticsMessages);
                 throw new ReservationAlreadyExistsException("Reservation for date " + current.toString() + " already exists!");
